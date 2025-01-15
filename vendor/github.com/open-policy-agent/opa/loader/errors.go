@@ -41,7 +41,7 @@ func (e *Errors) add(err error) {
 type unsupportedDocumentType string
 
 func (path unsupportedDocumentType) Error() string {
-	return string(path) + ": bad document type"
+	return string(path) + ": document must be of type object"
 }
 
 type unrecognizedFile string
@@ -59,10 +59,4 @@ type mergeError string
 
 func (e mergeError) Error() string {
 	return string(e) + ": merge error"
-}
-
-type emptyModuleError string
-
-func (e emptyModuleError) Error() string {
-	return string(e) + ": empty policy"
 }

@@ -7,10 +7,13 @@ package util
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"reflect"
 
-	"github.com/ghodss/yaml"
+	"sigs.k8s.io/yaml"
+
+	"github.com/open-policy-agent/opa/loader/extension"
 )
 
 // UnmarshalJSON parses the JSON encoded data and stores the result in the value
@@ -18,10 +21,30 @@ import (
 //
 // This function is intended to be used in place of the standard json.Marshal
 // function when json.Number is required.
-func UnmarshalJSON(bs []byte, x interface{}) (err error) {
+func UnmarshalJSON(bs []byte, x interface{}) error {
+	return unmarshalJSON(bs, x, true)
+}
+
+func unmarshalJSON(bs []byte, x interface{}, ext bool) error {
 	buf := bytes.NewBuffer(bs)
 	decoder := NewJSONDecoder(buf)
-	return decoder.Decode(x)
+	if err := decoder.Decode(x); err != nil {
+		if handler := extension.FindExtension(".json"); handler != nil && ext {
+			return handler(bs, x)
+		}
+		return err
+	}
+
+	// Since decoder.Decode validates only the first json structure in bytes,
+	// check if decoder has more bytes to consume to validate whole input bytes.
+	tok, err := decoder.Token()
+	if tok != nil {
+		return fmt.Errorf("error: invalid character '%s' after top-level value", tok)
+	}
+	if err != nil && err != io.EOF {
+		return err
+	}
+	return nil
 }
 
 // NewJSONDecoder returns a new decoder that reads from r.
@@ -89,11 +112,22 @@ func Reference(x interface{}) *interface{} {
 	return &x
 }
 
-// Unmarshal decodes a YAML or JSON value into the specified type.
+// Unmarshal decodes a YAML, JSON or JSON extension value into the specified type.
 func Unmarshal(bs []byte, v interface{}) error {
-	bs, err := yaml.YAMLToJSON(bs)
-	if err != nil {
-		return err
+	if len(bs) > 2 && bs[0] == 0xef && bs[1] == 0xbb && bs[2] == 0xbf {
+		bs = bs[3:] // Strip UTF-8 BOM, see https://www.rfc-editor.org/rfc/rfc8259#section-8.1
 	}
-	return UnmarshalJSON(bs, v)
+
+	if json.Valid(bs) {
+		return unmarshalJSON(bs, v, false)
+	}
+	nbs, err := yaml.YAMLToJSON(bs)
+	if err == nil {
+		return unmarshalJSON(nbs, v, false)
+	}
+	// not json or yaml: try extensions
+	if handler := extension.FindExtension(".json"); handler != nil {
+		return handler(bs, v)
+	}
+	return err
 }

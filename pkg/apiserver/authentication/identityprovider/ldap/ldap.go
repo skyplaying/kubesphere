@@ -1,18 +1,7 @@
 /*
-Copyright 2020 The KubeSphere Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+ * Please refer to the LICENSE file in the root directory of the project.
+ * https://github.com/kubesphere/kubesphere/blob/master/LICENSE
+ */
 
 package ldap
 
@@ -21,16 +10,18 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
+	"net"
+	"net/url"
+	"os"
 	"time"
 
 	"github.com/go-ldap/ldap"
 	"github.com/mitchellh/mapstructure"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 
 	"kubesphere.io/kubesphere/pkg/apiserver/authentication/identityprovider"
-	"kubesphere.io/kubesphere/pkg/apiserver/authentication/oauth"
+	"kubesphere.io/kubesphere/pkg/server/options"
 )
 
 const (
@@ -39,13 +30,13 @@ const (
 )
 
 func init() {
-	identityprovider.RegisterGenericProvider(&ldapProviderFactory{})
+	identityprovider.RegisterGenericProviderFactory(&ldapProviderFactory{})
 }
 
 type ldapProvider struct {
 	// Host and optional port of the LDAP server in the form "host:port".
 	// If the port is not supplied, 389 for insecure or StartTLS connections, 636
-	Host string `json:"host,omitempty" yaml:"managerDN"`
+	Host string `json:"host,omitempty" yaml:"host"`
 	// Timeout duration when reading data from remote server. Default to 15s.
 	ReadTimeout int `json:"readTimeout" yaml:"readTimeout"`
 	// If specified, connections will use the ldaps:// protocol
@@ -85,9 +76,9 @@ func (l *ldapProviderFactory) Type() string {
 	return ldapIdentityProvider
 }
 
-func (l *ldapProviderFactory) Create(options oauth.DynamicOptions) (identityprovider.GenericProvider, error) {
+func (l *ldapProviderFactory) Create(opts options.DynamicOptions) (identityprovider.GenericProvider, error) {
 	var ldapProvider ldapProvider
-	if err := mapstructure.Decode(options, &ldapProvider); err != nil {
+	if err := mapstructure.Decode(opts, &ldapProvider); err != nil {
 		return nil, err
 	}
 	if ldapProvider.ReadTimeout <= 0 {
@@ -174,19 +165,26 @@ func (l ldapProvider) Authenticate(username string, password string) (identitypr
 }
 
 func (l *ldapProvider) newConn() (*ldap.Conn, error) {
-	if !l.StartTLS {
-		return ldap.Dial("tcp", l.Host)
+	lurl, err := url.Parse(l.Host)
+	if err != nil {
+		return nil, ldap.NewError(ldap.ErrorNetwork, err)
 	}
+
+	host, port, err := net.SplitHostPort(lurl.Host)
+	if err != nil {
+		host = lurl.Host
+		port = ""
+	}
+
 	tlsConfig := tls.Config{}
 	if l.InsecureSkipVerify {
 		tlsConfig.InsecureSkipVerify = true
 	}
 	tlsConfig.RootCAs = x509.NewCertPool()
 	var caCert []byte
-	var err error
 	// Load CA cert
 	if l.RootCA != "" {
-		if caCert, err = ioutil.ReadFile(l.RootCA); err != nil {
+		if caCert, err = os.ReadFile(l.RootCA); err != nil {
 			klog.Error(err)
 			return nil, err
 		}
@@ -200,5 +198,36 @@ func (l *ldapProvider) newConn() (*ldap.Conn, error) {
 	if caCert != nil {
 		tlsConfig.RootCAs.AppendCertsFromPEM(caCert)
 	}
-	return ldap.DialTLS("tcp", l.Host, &tlsConfig)
+
+	var conn *ldap.Conn
+	switch lurl.Scheme {
+	case "ldap":
+		if port == "" {
+			port = ldap.DefaultLdapPort
+		}
+		conn, err = ldap.Dial("tcp", net.JoinHostPort(host, port))
+		if err != nil {
+			klog.Error(err)
+			return nil, err
+		}
+	case "ldaps":
+		if port == "" {
+			port = ldap.DefaultLdapsPort
+		}
+		conn, err = ldap.DialTLS("tcp", net.JoinHostPort(host, port), &tlsConfig)
+		if err != nil {
+			klog.Error(err)
+			return nil, err
+		}
+	default:
+		return nil, ldap.NewError(ldap.ErrorNetwork, fmt.Errorf("unknown scheme '%s'", lurl.Scheme))
+	}
+
+	if l.StartTLS {
+		if err = conn.StartTLS(&tlsConfig); err != nil {
+			klog.Error(err)
+			return nil, err
+		}
+	}
+	return conn, err
 }
