@@ -1,18 +1,7 @@
 /*
-Copyright 2020 The KubeSphere Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+ * Please refer to the LICENSE file in the root directory of the project.
+ * https://github.com/kubesphere/kubesphere/blob/master/LICENSE
+ */
 
 package oidc
 
@@ -22,22 +11,23 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"net/url"
 
-	"kubesphere.io/kubesphere/pkg/utils/sliceutil"
+	"github.com/coreos/go-oidc/v3/oidc"
 
-	"github.com/coreos/go-oidc"
-	"github.com/form3tech-oss/jwt-go"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/oauth2"
 
 	"kubesphere.io/kubesphere/pkg/apiserver/authentication/identityprovider"
-	"kubesphere.io/kubesphere/pkg/apiserver/authentication/oauth"
+	"kubesphere.io/kubesphere/pkg/server/options"
+	"kubesphere.io/kubesphere/pkg/utils/sliceutil"
 )
 
 func init() {
-	identityprovider.RegisterOAuthProvider(&oidcProviderFactory{})
+	identityprovider.RegisterOAuthProviderFactory(&oidcProviderFactory{})
 }
 
 type oidcProvider struct {
@@ -62,6 +52,10 @@ type oidcProvider struct {
 
 	// Scope specifies optional requested permissions.
 	Scopes []string `json:"scopes" yaml:"scopes"`
+
+	// Redirection to RP After Logout
+	// See https://openid.net/specs/openid-connect-rpinitiated-1_0.html#RedirectionAfterLogout
+	PostLogoutRedirectURI string `json:"postLogoutRedirectURI" yaml:"postLogoutRedirectURI"`
 
 	// GetUserInfo uses the userinfo endpoint to get additional claims for the token.
 	// This is especially useful where upstreams return "thin" id tokens
@@ -133,9 +127,9 @@ func (f *oidcProviderFactory) Type() string {
 	return "OIDCIdentityProvider"
 }
 
-func (f *oidcProviderFactory) Create(options oauth.DynamicOptions) (identityprovider.OAuthProvider, error) {
+func (f *oidcProviderFactory) Create(opts options.DynamicOptions) (identityprovider.OAuthProvider, error) {
 	var oidcProvider oidcProvider
-	if err := mapstructure.Decode(options, &oidcProvider); err != nil {
+	if err := mapstructure.Decode(opts, &oidcProvider); err != nil {
 		return nil, err
 	}
 	// dynamically discover
@@ -164,12 +158,23 @@ func (f *oidcProviderFactory) Create(options oauth.DynamicOptions) (identityprov
 		oidcProvider.Endpoint.UserInfoURL, _ = providerJSON["userinfo_endpoint"].(string)
 		oidcProvider.Endpoint.JWKSURL, _ = providerJSON["jwks_uri"].(string)
 		oidcProvider.Endpoint.EndSessionURL, _ = providerJSON["end_session_endpoint"].(string)
+
+		endSessionUrl, err := url.Parse(oidcProvider.Endpoint.EndSessionURL)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse end session url: %v", err)
+		}
+		endSessionQuery := endSessionUrl.Query()
+		endSessionQuery.Add("post_logout_redirect_uri", oidcProvider.PostLogoutRedirectURI)
+		endSessionQuery.Add("client_id", oidcProvider.ClientID)
+		endSessionUrl.RawQuery = endSessionQuery.Encode()
+
+		oidcProvider.Endpoint.EndSessionURL = endSessionUrl.String()
 		oidcProvider.Provider = provider
 		oidcProvider.Verifier = provider.Verifier(&oidc.Config{
 			// TODO: support HS256
 			ClientID: oidcProvider.ClientID,
 		})
-		options["endpoint"] = oauth.DynamicOptions{
+		opts["endpoint"] = options.DynamicOptions{
 			"authURL":       oidcProvider.Endpoint.AuthURL,
 			"tokenURL":      oidcProvider.Endpoint.TokenURL,
 			"userInfoURL":   oidcProvider.Endpoint.UserInfoURL,
@@ -250,7 +255,7 @@ func (o *oidcProvider) IdentityExchangeCallback(req *http.Request) (identityprov
 			if err != nil {
 				return nil, fmt.Errorf("failed to fetch userinfo: %v", err)
 			}
-			data, err := ioutil.ReadAll(resp.Body)
+			data, err := io.ReadAll(resp.Body)
 			if err != nil {
 				return nil, fmt.Errorf("failed to fetch userinfo: %v", err)
 			}

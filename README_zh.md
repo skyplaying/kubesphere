@@ -9,9 +9,9 @@
 <p align=center>
 <a href="https://goreportcard.com/report/github.com/kubesphere/kubesphere"><img src="https://goreportcard.com/badge/github.com/kubesphere/kubesphere" alt="A+"></a>
 <a href="https://hub.docker.com/r/kubesphere/ks-installer"><img src="https://img.shields.io/docker/pulls/kubesphere/ks-installer"></a>
-<a href="https://github.com/search?q=user%3Akubesphere+user%3Akubesphere-sigs+label%3A%22good+first+issue%22+state%3Aopen&type=Issues&ref=advsearch&l=&l="><img src="https://img.shields.io/github/issues/badges/shields/good%20first%20issue" alt="good first"></a>
+<a href="https://github.com/kubesphere/kubesphere/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc+label%3A%22good+first+issue%22"><img src="https://img.shields.io/github/issues/kubesphere/kubesphere/good%20first%20issue?logo=github" alt="good first issue"></a>
 <a href="https://twitter.com/intent/follow?screen_name=KubeSphere"><img src="https://img.shields.io/twitter/follow/KubeSphere?style=social" alt="follow on Twitter"></a>
-<a href="https://join.slack.com/t/kubesphere/shared_invite/enQtNTE3MDIxNzUxNzQ0LTZkNTdkYWNiYTVkMTM5ZThhODY1MjAyZmVlYWEwZmQ3ODQ1NmM1MGVkNWEzZTRhNzk0MzM5MmY4NDc3ZWVhMjE"><img src="https://img.shields.io/badge/Slack-600%2B-blueviolet?logo=slack&amp;logoColor=white"></a>
+<a href="https://join.slack.com/t/kubesphere/shared_invite/zt-219hq0b5y-el~FMRrJxGM1Egf5vX6QiA"><img src="https://img.shields.io/badge/Slack-2000%2B-blueviolet?logo=slack&amp;logoColor=white"></a>
 <a href="https://www.youtube.com/channel/UCyTdUQUYjf7XLjxECx63Hpw"><img src="https://img.shields.io/youtube/channel/subscribers/UCyTdUQUYjf7XLjxECx63Hpw?style=social"></a>
 </p>
 
@@ -47,9 +47,9 @@
 
 ## Demo 环境
 
-🎮 使用账号 `demo1 / Demo123` 登录 [Demo 环境](https://demo.kubesphere.io/) 。请注意，该帐户仅授予了 view 权限。
+🎮 [KubeSphere Cloud 轻量集群](https://kubesphere.cloud/console/managed-cluster/)为您提供免费、稳定且开箱即用的 KubeSphere 托管集群服务。注册账号并登录后，可在 5 秒内新建一个安装 KubeSphere 的 K8s 集群，进而进入 KubeSphere 交互式体验各项功能。
 
-🖥 您还可以快速查看[Demo 视频](https://youtu.be/YxZ1YUv0CYs) 。
+🖥 您还可以通过 [Demo 视频](https://youtu.be/YxZ1YUv0CYs)快速了解使用操作。
 
 ## 平台功能
 
@@ -65,7 +65,7 @@
 
 <details>
   <summary><b>🤖 Kubernetes DevOps</b></summary>
-  提供开箱即用的基于 Jenkins 的 CI/CD，并内置自动化流水线插件，包括 Binary-to-Image (B2I) 和 Source-to-Image (S2I)，<a href="https://kubesphere.io/zh/devops/">了解更多</a>。
+  提供基于 GitOps 的 CD 方案，底层支持 Argo CD，可实时统计 CD 状态。结合主流 CI 引擎 Jenkins，让 DevOps 更加易用。<a href="https://kubesphere.io/zh/devops/">了解更多</a>。
   </details>
 
 <details>
@@ -118,19 +118,41 @@ KubeSphere 使用前后端分离的架构，将 [前端](https://github.com/kube
 
 ## 最新版本
 
-🎉 KubeSphere 3.2.1 全新发布！！多项功能优化，带来更好的用户体验，详见 [v3.2.1 发行记录](https://kubesphere.com.cn/docs/release/release-v321/) 。
+🎉 KubeSphere 3.4.0 全新发布！！多项功能与体验优化，带来更好的产品体验，详见 [v3.4.0 版本说明](https://www.kubesphere.io/zh/news/kubesphere-3.4.0-ga-announcement/) 。
+
+#### 组件支持版本列表
+
+| Component      | Version                                                                       | K8s supported version         |
+|----------------|-------------------------------------------------------------------------------|-------------------------------|
+| Alerting       | N/A                                                                           | 1.21,1.22,1.23,1.24,1.25,1.26 |
+| Auditing	      | v0.2.0                                                                        | 1.21,1.22,1.23,1.24,1.25,1.26 |
+| Monitoring     | N/A		                                                                         | 1.21,1.22,1.23,1.24,1.25,1.26 |
+| DevOps         | v3.4.0                                                                        | 1.21,1.22,1.23,1.24,1.25,1.26 |
+| EdgeRuntime    | v1.13.0                                                                       | 1.21,1.22,1.23                |
+| Events         | N/A                                                                           | 1.21,1.22,1.23,1.24,1.25,1.26 |
+| Logging        | opensearch：v2.6.0<br/>fluentbit-operator: v0.14.0<br/> fluent-bit-tag: v1.9.4 | 1.21,1.22,1.23,1.24,1.25,1.26 |
+| Metrics Server | v0.4.2                                                                        | 1.21,1.22,1.23,1.24,1.25,1.26 |
+| Network        | N/A                                                                           | 1.21,1.22,1.23,1.24,1.25,1.26 |
+| Notification   | v2.3.0                                                                        | 1.21,1.22,1.23,1.24,1.25,1.26 |
+| AppStore       | N/A                                                                           | 1.21,1.22,1.23,1.24,1.25,1.26 |
+| Storage        | pvc-autoresizer: v0.3.0<br/>storageclass-accessor: v0.2.2                     | 1.21,1.22,1.23,1.24,1.25,1.26 |
+| ServiceMesh    | Istio: v1.14.6                                                                | 1.21,1.22,1.23,1.24           |
+| Gateway        | Ingress NGINX Controller: v1.3.1      
+
 ## 安装
 
-KubeSphere 支持在任意平台运行，从本地数据中心到混合多云再走向边缘。此外，KubeSphere 可以部署在任何版本兼容的 Kubernetes 集群上。Installer 默认将执行最小化安装，您可以在安装前或安装后自定义[安装可插拔功能组件](https://kubesphere.com.cn/docs/quick-start/enable-pluggable-components/)。
+KubeSphere 支持在任意平台运行，从本地数据中心到混合多云再走向边缘。此外，KubeSphere 可以部署在任何版本兼容的 Kubernetes 集群上。Installer 默认将执行最小化安装，您可以在安装前或安装后自定义[安装可插拔功能组件](https://kubesphere.io/zh/docs/quick-start/enable-pluggable-components/)。
 ### 快速入门
 #### 在 K8s/K3s 上安装
 
-请确保您的集群满足安装的[前提条件](https://kubesphere.io/zh/docs/quick-start/minimal-kubesphere-on-k8s/)，运行以下命令以在现有 Kubernetes 集群上安装 KubeSphere：
+请确保您的集群已经安装 Kubernetes v1.21.x, v1.22.x, v1.23.x, * v1.24.x, * v1.25.x, 或 * v1.26.x。带星号的版本可能出现边缘节点部分功能不可用的情况。
+
+运行以下命令以在现有 Kubernetes 集群上安装 KubeSphere：
 
 ```yaml
-kubectl apply -f https://github.com/kubesphere/ks-installer/releases/download/v3.2.1/kubesphere-installer.yaml
+kubectl apply -f https://github.com/kubesphere/ks-installer/releases/download/v3.4.0/kubesphere-installer.yaml
    
-kubectl apply -f https://github.com/kubesphere/ks-installer/releases/download/v3.2.1/cluster-configuration.yaml
+kubectl apply -f https://github.com/kubesphere/ks-installer/releases/download/v3.4.0/cluster-configuration.yaml
 ```
 #### All-in-one（Linux 单节点安装）
 
@@ -138,21 +160,19 @@ kubectl apply -f https://github.com/kubesphere/ks-installer/releases/download/v3
 
 ```yaml
 # 下载 KubeKey
-curl -sfL https://get-kk.kubesphere.io | VERSION=v1.2.0 sh -
+curl -sfL https://get-kk.kubesphere.io | VERSION=v3.0.10 sh -
 # 为 kk 赋予可执行权限
 chmod +x kk
 # 创建集群
-./kk create cluster --with-kubernetes v1.21.4-k3s --with-kubesphere v3.2.1
+./kk create cluster --with-kubernetes v1.24.14 --container-manager containerd --with-kubesphere v3.4.0
 ```
 
 可使用以下命令查看安装日志。如果安装成功，可使用 `http://IP:30880` 访问 KubeSphere Console，管理员登录帐密为 `admin/P@88w0rd`。
 
 ```yaml
-kubectl logs -n kubesphere-system $(kubectl get pod -n kubesphere-system -l app=ks-install -o jsonpath='{.items[0].metadata.name}') -f
-``` 
-### 🐯 使用 Katacoda 在线安装体验 KubeSphere
+kubectl logs -n kubesphere-system $(kubectl get pod -n kubesphere-system -l 'app in (ks-install, ks-installer)' -o jsonpath='{.items[0].metadata.name}') -f
+```
 
-[Katacoda](https://www.katacoda.com/) 是一个在线的云原生技术学习实验平台，你可以使用它在浏览器中快速 [安装体验 KubeSphere](https://www.katacoda.com/kubesphere/scenarios/install-kubesphere-on-kubernetes) 。
 ### 在托管 Kubernetes 上部署 KubeSphere
 
 KubeSphere 托管在以下云供应商上，您可以通过在其托管的 Kubernetes 服务上一键安装来部署 KubeSphere。
@@ -166,21 +186,23 @@ KubeSphere 托管在以下云供应商上，您可以通过在其托管的 Kuber
 
 > 👨‍💻 不能访问网络？参考 [在Kubernetes上离线安装](https://kubesphere.io/zh/docs/installing-on-kubernetes/on-prem-kubernetes/install-ks-on-linux-airgapped/) 或者 [在 Linux 上离线安装](https://kubesphere.io/zh/docs/installing-on-linux/introduction/air-gapped-installation/) 了解如何使用私有仓库来安装 KubeSphere。
 
-## 贡献、支持、讨论和社区
+## 指引、讨论、贡献与支持
 
 我们 :heart: 您的贡献。[社区](https://github.com/kubesphere/community) 将引导您了解如何开始贡献 KubeSphere。[开发指南](https://github.com/kubesphere/community/tree/master/developer-guide/development) 说明了如何安装开发环境。
 
 - [中文论坛](https://kubesphere.com.cn/forum/)
 - [社区微信群（见官网底部）](https://kubesphere.com.cn/)
-- [Slack Channel](https://join.slack.com/t/kubesphere/shared_invite/enQtNTE3MDIxNzUxNzQ0LTZkNTdkYWNiYTVkMTM5ZThhODY1MjAyZmVlYWEwZmQ3ODQ1NmM1MGVkNWEzZTRhNzk0MzM5MmY4NDc3ZWVhMjE)
+- [Slack Channel](https://join.slack.com/t/kubesphere/shared_invite/zt-219hq0b5y-el~FMRrJxGM1Egf5vX6QiA)
 - [Bilibili](https://space.bilibili.com/438908638)
-- [在推特上关注我们](https://twitter.com/KubeSphere)
+- [Twitter](https://twitter.com/KubeSphere)
 
-请将任何 KubeSphere 的 Bug、问题和需求提交到 [KubeSphere GitHub Issue](https://github.com/kubesphere/kubesphere/issues) 。
+:hugs: 请将任何 KubeSphere 的 Bug、问题和需求提交到 [KubeSphere GitHub Issue](https://github.com/kubesphere/kubesphere/issues)。
+
+:heart_decoration: 若您期待官方、高效的技术服务，青云科技也为 KubeSphere 开源版本提供全程可靠、小时响应的工单支持，详情垂询 [KubeSphere 在线技术支持](https://kubesphere.cloud/ticket/)。
 
 ## 谁在使用 KubeSphere
 
-[用户案例学习](https://kubesphere.com.cn/case/) 列出了哪些企业在使用 KubeSphere。欢迎 [发表评论](https://github.com/kubesphere/kubesphere/issues/4123) 来分享您的使用案例。
+[用户案例学习](https://kubesphere.io/zh/case/) 列出了哪些企业在使用 KubeSphere。欢迎 [发表评论](https://github.com/kubesphere/kubesphere/issues/4123) 来分享您的使用案例。
 
 ## Landscapes
 

@@ -57,7 +57,7 @@ func (ss *saveSet) contains(t *ast.Term, b *bindings) bool {
 	return false
 }
 
-// ContainsRecursive retruns true if the term t is or contains a term that is
+// ContainsRecursive returns true if the term t is or contains a term that is
 // contained in the save set. This function will close over the binding list
 // when it encounters vars.
 func (ss *saveSet) ContainsRecursive(t *ast.Term, b *bindings) bool {
@@ -279,7 +279,7 @@ func newSaveSupport() *saveSupport {
 }
 
 func (s *saveSupport) List() []*ast.Module {
-	result := []*ast.Module{}
+	result := make([]*ast.Module, 0, len(s.modules))
 	for _, module := range s.modules {
 		result = append(result, module)
 	}
@@ -287,22 +287,37 @@ func (s *saveSupport) List() []*ast.Module {
 }
 
 func (s *saveSupport) Exists(path ast.Ref) bool {
-	k := path[:len(path)-1].String()
-	module, ok := s.modules[k]
+	pkg, ruleRef := splitPackageAndRule(path)
+	module, ok := s.modules[pkg.String()]
 	if !ok {
 		return false
 	}
-	name := ast.Var(path[len(path)-1].Value.(ast.String))
+
+	if len(ruleRef) == 1 {
+		name := ruleRef[0].Value.(ast.Var)
+		for _, rule := range module.Rules {
+			if rule.Head.Name.Equal(name) {
+				return true
+			}
+		}
+		return false
+	}
+
 	for _, rule := range module.Rules {
-		if rule.Head.Name.Equal(name) {
+		if rule.Head.Ref().HasPrefix(ruleRef) {
 			return true
 		}
 	}
+
 	return false
 }
 
 func (s *saveSupport) Insert(path ast.Ref, rule *ast.Rule) {
-	pkg := path[:len(path)-1]
+	pkg, _ := splitPackageAndRule(path)
+	s.InsertByPkg(pkg, rule)
+}
+
+func (s *saveSupport) InsertByPkg(pkg ast.Ref, rule *ast.Rule) {
 	k := pkg.String()
 	module, ok := s.modules[k]
 	if !ok {
@@ -317,11 +332,30 @@ func (s *saveSupport) Insert(path ast.Ref, rule *ast.Rule) {
 	module.Rules = append(module.Rules, rule)
 }
 
+func splitPackageAndRule(path ast.Ref) (ast.Ref, ast.Ref) {
+	p := path.Copy()
+
+	ruleRefStart := 2 // path always contains at least 3 terms (data. + one term in package + rule name)
+	for i := ruleRefStart; i < len(p.StringPrefix()); i++ {
+		t := p[i]
+		if str, ok := t.Value.(ast.String); ok && ast.IsVarCompatibleString(string(str)) {
+			ruleRefStart = i
+		} else {
+			break
+		}
+	}
+
+	pkg := p[:ruleRefStart]
+	rule := p[ruleRefStart:]
+	rule[0].Value = ast.Var(rule[0].Value.(ast.String))
+	return pkg, rule
+}
+
 // saveRequired returns true if the statement x will result in some expressions
 // being saved. This check allows the evaluator to evaluate statements
 // completely during partial evaluation as long as they do not depend on any
 // kind of unknown value or statements that would generate saves.
-func saveRequired(c *ast.Compiler, ss *saveSet, b *bindings, x interface{}, rec bool) bool {
+func saveRequired(c *ast.Compiler, ic *inliningControl, icIgnoreInternal bool, ss *saveSet, b *bindings, x interface{}, rec bool) bool {
 
 	var found bool
 
@@ -344,9 +378,11 @@ func saveRequired(c *ast.Compiler, ss *saveSet, b *bindings, x interface{}, rec 
 			case ast.Ref:
 				if ss.Contains(node, b) {
 					found = true
+				} else if ic.Disabled(v.ConstantPrefix(), icIgnoreInternal) {
+					found = true
 				} else {
-					for _, rule := range c.GetRulesDynamic(v) {
-						if saveRequired(c, ss, b, rule, true) {
+					for _, rule := range c.GetRulesDynamicWithOpts(v, ast.RulesOptions{IncludeHiddenModules: false}) {
+						if saveRequired(c, ic, icIgnoreInternal, ss, b, rule, true) {
 							found = true
 							break
 						}
@@ -373,9 +409,56 @@ func ignoreExprDuringPartial(expr *ast.Expr) bool {
 }
 
 func ignoreDuringPartial(bi *ast.Builtin) bool {
+	// Note(philipc): We keep this legacy check around to avoid breaking
+	// existing library users.
+	//nolint:staticcheck // We specifically ignore our own linter warning here.
 	for _, ignore := range ast.IgnoreDuringPartialEval {
 		if bi == ignore {
 			return true
+		}
+	}
+	// Otherwise, ensure all non-deterministic builtins are thrown out.
+	return bi.Nondeterministic
+}
+
+type inliningControl struct {
+	shallow bool
+	disable []disableInliningFrame
+}
+
+type disableInliningFrame struct {
+	internal bool
+	refs     []ast.Ref
+}
+
+func (i *inliningControl) PushDisable(refs []ast.Ref, internal bool) {
+	if i == nil {
+		return
+	}
+	i.disable = append(i.disable, disableInliningFrame{
+		internal: internal,
+		refs:     refs,
+	})
+}
+
+func (i *inliningControl) PopDisable() {
+	if i == nil {
+		return
+	}
+	i.disable = i.disable[:len(i.disable)-1]
+}
+
+func (i *inliningControl) Disabled(ref ast.Ref, ignoreInternal bool) bool {
+	if i == nil {
+		return false
+	}
+	for _, frame := range i.disable {
+		if !frame.internal || !ignoreInternal {
+			for _, other := range frame.refs {
+				if other.HasPrefix(ref) || ref.HasPrefix(other) {
+					return true
+				}
+			}
 		}
 	}
 	return false
